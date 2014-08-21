@@ -1,0 +1,23 @@
+{
+    "application" : {
+        "listen_on" : ":6500",
+        "https_on"  : ":6443",
+        "ssl_cert"  : "./cert.pem",
+        "ssl_key"   : "./key.pem"
+    },
+
+    "connections"   : {
+    	"rethink" : {
+            "spec"    : "localhost:28015",
+            "db_name" : "dressformer",
+            "default" : true,
+            "type"    : "rethinkdb"
+        }
+    },
+
+    "node" : {
+        "id"           : 0,
+        "name"         : "storage-00",
+        "storage_root" : "/tmp/storage-00"
+    }
+}
