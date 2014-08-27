@@ -5,12 +5,13 @@ import (
 	"df/assets/models"
 	. "df/assets/utils"
 	"fmt"
-	// "github.com/3d0c/binding"
+	"github.com/3d0c/binding"
 	"github.com/3d0c/martini-contrib/config"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/encoder"
 	"log"
 	"net/http"
+	"runtime"
 )
 
 func init() {
@@ -18,6 +19,8 @@ func init() {
 
 	config.Init("./config.json")
 	config.LoadInto(AppConfig)
+
+	runtime.GOMAXPROCS(8)
 }
 
 func main() {
@@ -25,7 +28,7 @@ func main() {
 	route := martini.NewRouter()
 
 	m.Use(func(c martini.Context, w http.ResponseWriter) {
-		c.MapTo(encoder.JsonEncoder{}, (*encoder.Encoder)(nil))
+		c.MapTo(encoder.JsonEncoder{PrettyPrint: true}, (*encoder.Encoder)(nil))
 		w.Header().Set("Content-Type", "application/json")
 	})
 
@@ -48,6 +51,24 @@ func main() {
 	route.Post("/",
 		construct(&ctrl.File{}),
 		(*ctrl.File).Create,
+	)
+
+	route.Get("/image/:id",
+		binding.Bind(models.URLOptionsScheme{}),
+		construct(&ctrl.Image{}),
+		(*ctrl.Image).Find,
+	)
+
+	route.Get("/geometry/:id",
+		binding.Bind(models.URLOptionsScheme{}),
+		construct(&ctrl.Geometry{}),
+		(*ctrl.Geometry).Find,
+	)
+
+	route.Post("/geometry",
+		binding.Bind(models.GeometryScheme{}),
+		construct(&ctrl.Geometry{}),
+		(*ctrl.Geometry).Create,
 	)
 
 	m.Action(route.Handle)

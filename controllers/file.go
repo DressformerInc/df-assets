@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"df/api/utils"
 	"df/assets/models"
 	. "df/assets/utils"
+	"df/errmap"
 	"github.com/3d0c/oid"
 	"github.com/martini-contrib/encoder"
 	"io/ioutil"
@@ -21,7 +21,7 @@ func (*File) Construct(args ...interface{}) interface{} {
 
 func (this *File) Create(enc encoder.Encoder, req *http.Request) (int, []byte) {
 	if !strings.Contains(req.Header.Get("Content-Type"), "multipart/form-data") {
-		return http.StatusBadRequest, encoder.Must(enc.Encode(utils.Err("Expected ContentType is multipart/form-data.")))
+		return http.StatusBadRequest, encoder.Must(enc.Encode(errmap.Err("Expected ContentType is multipart/form-data.")))
 	}
 
 	result := make([]models.FileScheme, 0)

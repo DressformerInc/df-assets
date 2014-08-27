@@ -63,6 +63,10 @@ func (this *ConfigScheme) StoragePath(id string) string {
 	return this.StorageRoot() + "/" + strings.Join(parts, "/") + "/"
 }
 
+func (this *ConfigScheme) StorageFilePath(id string) string {
+	return this.StoragePath(id) + id
+}
+
 func (this *ConfigScheme) PathCreate(path string) string {
 	if !path_exists[path] {
 		if err := os.MkdirAll(path, 0755); err != nil {
