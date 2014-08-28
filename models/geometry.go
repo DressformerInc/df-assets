@@ -96,6 +96,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	// if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
 	// 	return nil
 	// }
+	pointers := []unsafe.Pointer{}
 
 	c_src := C.CString(AppConfig.StorageFilePath(this.Base))
 	c_dst := C.CString(dst)
@@ -129,10 +130,9 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 
 			c_fp := C.CString(fp)
 
-			C.processAddMorphTargetObject(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
+			C.AddMorphTargetObject_t(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
 
-			C.free(unsafe.Pointer(c_fp))
-
+			pointers = append(pointers, unsafe.Pointer(c_fp))
 		}
 
 		C.procAddUid(unsafe.Pointer(mobj), C.int(i))
@@ -141,11 +141,15 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 		i++
 	}
 
-	C.build(unsafe.Pointer(mobj))
+	C.build(unsafe.Pointer(mobj), unsafe.Pointer(mptr))
 	C.saveObject(c_dst, unsafe.Pointer(mobj))
 
 	C.releaseMorpher(unsafe.Pointer(mptr))
 	C.releaseMobj(unsafe.Pointer(mobj))
+
+	for _, ptr := range pointers {
+		C.free(ptr)
+	}
 
 	return nil
 }
