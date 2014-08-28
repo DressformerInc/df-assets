@@ -80,6 +80,10 @@ func (this *Geometry) Create(payload GeometryScheme) (*GeometryScheme, error) {
 	return response.NewValue.(*GeometryScheme), nil
 }
 
+// func (this *GeometryScheme) Morph(dst string, pmap Params) error {
+// 	return nil
+// }
+
 // @bug @todo
 // While we're using GUID as a geomtry object id, we can't distribute
 // assets. Because we can't store and get node id inside it.
@@ -87,6 +91,7 @@ func (this *Geometry) Create(payload GeometryScheme) (*GeometryScheme, error) {
 // 1. change geometry id to oid
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
+
 func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	// if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
 	// 	return nil
@@ -130,8 +135,8 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 
 		}
 
-		C.procAddUid(C.int(i))
-		C.procAddWeight(C.double(val.(float64)))
+		C.procAddUid(unsafe.Pointer(mobj), C.int(i))
+		C.procAddWeight(unsafe.Pointer(mobj), C.double(val.(float64)))
 
 		i++
 	}

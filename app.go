@@ -40,7 +40,7 @@ func main() {
 		}
 
 		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, X-Requested-With")
 		w.Header().Add("Cache-Control", "max-age=2592000")
 		w.Header().Add("Pragma", "public")
 		w.Header().Add("Cache-Control", "public")
