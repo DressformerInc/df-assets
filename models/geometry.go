@@ -88,9 +88,9 @@ func (this *Geometry) Create(payload GeometryScheme) (*GeometryScheme, error) {
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
 func (this *GeometryScheme) Morph(dst string, pmap Params) error {
-	if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
-		return nil
-	}
+	// if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
+	// 	return nil
+	// }
 	pointers := []unsafe.Pointer{}
 
 	c_src := C.CString(AppConfig.StorageFilePath(this.Base))
@@ -106,6 +106,8 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	i := 0
 
 	for name, val := range pmap {
+		log.Println("Name:", name, "Val:", val)
+
 		sources := findSection(name, this.MorphTargets)
 		if sources == nil {
 			return errors.New(fmt.Sprintf("Section for parameter: %s not found", name))
@@ -121,7 +123,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 				return errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
 			}
 
-			log.Println("Adding source:", fp, source.Weight)
+			// log.Println("Adding source:", fp, source.Weight)
 
 			c_fp := C.CString(fp)
 
@@ -129,7 +131,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 
 			pointers = append(pointers, unsafe.Pointer(c_fp))
 		}
-
+		log.Println("Adding uid and weight:", i, val)
 		C.procAddUid(unsafe.Pointer(mobj), C.int(i))
 		C.procAddWeight(unsafe.Pointer(mobj), C.double(val.(float64)))
 

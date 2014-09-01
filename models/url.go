@@ -44,6 +44,8 @@ func (this URLOptionsScheme) ToHash(p Params) string {
 	return s
 }
 
+// @todo
+// rewrite it using reflection
 func (this URLOptionsScheme) ToMap() Params {
 	result := Params{}
 
@@ -61,6 +63,10 @@ func (this URLOptionsScheme) ToMap() Params {
 
 	if this.Hips != 0 {
 		result["hips"] = this.Hips
+	}
+
+	if this.Underbust != 0 {
+		result["underbust"] = this.Underbust
 	}
 
 	return result
