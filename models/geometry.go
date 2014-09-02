@@ -21,8 +21,9 @@ import (
 )
 
 type Source struct {
-	Id     string  `gorethink:"id"     json:"id"`
-	Weight float64 `gorethink:"weight" json:"weight"`
+	Id     string  `gorethink:"id"               json:"id"`
+	Weight float64 `gorethink:"weight,omitempty" json:"weight,omitempty"`
+	Name   string  `gorethink:"origin_name"      json:"origin_name"`
 }
 
 type MorphTarget struct {
@@ -32,22 +33,40 @@ type MorphTarget struct {
 
 type GeometryScheme struct {
 	Id           string        `gorethink:"id,omitempty"   json:"id"   binding:"-"`
-	Base         string        `gorethink:"base"           json:"base"`
+	Base         Source        `gorethink:"base"           json:"base"`
+	Name         string        `gorethink:"name,omitempty" json:"name,omitempty"`
 	MorphTargets []MorphTarget `gorethink:"morph_targets"  json:"morph_targets,omitempty"`
 }
 
 type Geometry struct {
-	table r.Term
+	r.Term
 }
 
 func (*Geometry) Construct(args ...interface{}) interface{} {
 	return &Geometry{
-		table: r.Table("geometry"),
+		r.Db("dressformer").Table("geometry"),
 	}
 }
 
+func (this *Geometry) FindAll(opt URLOptionsScheme) []GeometryScheme {
+	rows, err := this.Skip(opt.Start).Limit(opt.Limit).Run(session())
+
+	if err != nil {
+		log.Println("Unable to fetch cursor for all. Error:", err)
+		return nil
+	}
+
+	var result []GeometryScheme
+
+	if err = rows.All(&result); err != nil {
+		log.Println("Unable to get data, err:", err)
+	}
+
+	return result
+}
+
 func (this *Geometry) Find(id interface{}) *GeometryScheme {
-	rows, err := this.table.Get(id).Run(session())
+	rows, err := this.Get(id).Run(session())
 	if err != nil {
 		log.Println("Unable to fetch cursor for id:", id, "Error:", err)
 		return nil
@@ -64,7 +83,7 @@ func (this *Geometry) Find(id interface{}) *GeometryScheme {
 }
 
 func (this *Geometry) Create(payload GeometryScheme) (*GeometryScheme, error) {
-	result, err := this.table.Insert(payload, r.InsertOpts{ReturnVals: true}).Run(session())
+	result, err := this.Insert(payload, r.InsertOpts{ReturnVals: true}).Run(session())
 	if err != nil {
 		log.Println("Error inserting data:", err)
 		return nil, errors.New("Internal server error")
@@ -80,6 +99,35 @@ func (this *Geometry) Create(payload GeometryScheme) (*GeometryScheme, error) {
 	return response.NewValue.(*GeometryScheme), nil
 }
 
+func (this *Geometry) Put(id string, payload GeometryScheme) (*GeometryScheme, error) {
+	result, err := this.Get(id).Update(payload, r.UpdateOpts{ReturnVals: true}).Run(session())
+	if err != nil {
+		log.Println("Error updating:", id, "with data:", payload, "error:", err)
+		return nil, errors.New("Wrong data")
+	}
+
+	response := &r.WriteResponse{NewValue: &GeometryScheme{}}
+
+	if err = result.One(response); err != nil {
+		log.Println("Unable to iterate cursor:", err)
+		return nil, errors.New("Internal server error")
+	}
+
+	log.Println("new_val:", response.NewValue)
+
+	return response.NewValue.(*GeometryScheme), nil
+}
+
+func (this *Geometry) Remove(id string) error {
+	_, err := this.Get(id).Delete().Run(session())
+	if err != nil {
+		log.Println("Error deleting:", id, "error:", err)
+		return errors.New("Internal server error")
+	}
+
+	return nil
+}
+
 // @bug @todo
 // While we're using GUID as a geomtry object id, we can't distribute
 // assets. Because we can't store and get node id inside it.
@@ -93,7 +141,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	// }
 	pointers := []unsafe.Pointer{}
 
-	c_src := C.CString(AppConfig.StorageFilePath(this.Base))
+	c_src := C.CString(AppConfig.StorageFilePath(this.Base.Id))
 	c_dst := C.CString(dst)
 	defer C.free(unsafe.Pointer(c_src))
 	defer C.free(unsafe.Pointer(c_dst))

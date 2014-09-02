@@ -23,33 +23,40 @@ func (*Geometry) Construct(args ...interface{}) interface{} {
 	}
 }
 
+func (this *Geometry) FindAll(enc encoder.Encoder, params martini.Params, opt models.URLOptionsScheme, w http.ResponseWriter, r *http.Request) (int, []byte) {
+
+	if opt.Limit == 0 || opt.Limit > 100 {
+		opt.Limit = 25
+	}
+
+	result := this.model.FindAll(opt)
+
+	return http.StatusOK, encoder.Must(enc.Encode(result))
+}
+
 func (this *Geometry) Find(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter, r *http.Request) (int, []byte) {
-	var httpStatus int = http.StatusOK
 
 	result := this.model.Find(params["id"])
-	if result == nil {
-		httpStatus = http.StatusNotFound
-	}
 
 	if strings.Contains("application/json", r.Header.Get("Accept")) {
-		return httpStatus, encoder.Must(enc.Encode(result))
+		return http.StatusOK, encoder.Must(enc.Encode(result))
 	}
 
-	if result == nil || result.Base == "" {
-		return httpStatus, []byte{}
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	if result == nil || result.Base.Id == "" {
+		return http.StatusNotFound, []byte{}
 	}
 
 	pmap := options.ToMap()
 	// name will be /path/to/id + optionally ".{param}{param}{param}{param}"
-	name := AppConfig.StorageFilePath(result.Base) + options.ToHash(pmap)
+	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash(pmap)
 	log.Println("Serving file:", name)
 
 	if err := result.Morph(name, pmap); err != nil {
 		log.Println("Unable to morph:", err)
 		return http.StatusNotFound, []byte{}
 	}
-
-	w.Header().Set("Content-Type", "application/octet-stream")
 
 	http.ServeFile(w, r, name)
 
@@ -65,4 +72,23 @@ func (this *Geometry) Create(payload models.GeometryScheme, enc encoder.Encoder)
 	}
 
 	return http.StatusOK, encoder.Must(enc.Encode(result))
+}
+
+func (this *Geometry) Put(payload models.GeometryScheme, enc encoder.Encoder, p martini.Params) (int, []byte) {
+
+	result, err := this.model.Put(p["id"], payload)
+	if err != nil {
+		return http.StatusBadRequest, []byte{}
+	}
+
+	return http.StatusOK, encoder.Must(enc.Encode(result))
+}
+
+func (this *Geometry) Remove(enc encoder.Encoder, p martini.Params) (int, []byte) {
+	err := this.model.Remove(p["id"])
+	if err != nil {
+		return http.StatusBadRequest, []byte{}
+	}
+
+	return http.StatusOK, []byte{}
 }

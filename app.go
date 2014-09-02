@@ -65,10 +65,28 @@ func main() {
 		(*ctrl.Geometry).Find,
 	)
 
+	route.Get("/geometry",
+		binding.Bind(models.URLOptionsScheme{}),
+		construct(&ctrl.Geometry{}),
+		(*ctrl.Geometry).FindAll,
+	)
+
 	route.Post("/geometry",
 		binding.Bind(models.GeometryScheme{}),
 		construct(&ctrl.Geometry{}),
 		(*ctrl.Geometry).Create,
+	)
+
+	route.Put("/geometry/:id",
+		binding.Bind(models.GeometryScheme{}),
+		construct(&ctrl.Geometry{}),
+		(*ctrl.Geometry).Put,
+	)
+
+	route.Delete(
+		"/geometry/:id",
+		construct(&ctrl.Geometry{}),
+		(*ctrl.Geometry).Remove,
 	)
 
 	m.Action(route.Handle)

@@ -13,6 +13,8 @@ type URLOptionsScheme struct {
 	Underbust float64 `form:"underbust"`
 	Waist     float64 `form:"waist"`
 	Hips      float64 `form:"hips"`
+	Start     int     `form:"start"`
+	Limit     int     `form:"limit"`
 }
 
 type Params map[string]interface{}
