@@ -21,21 +21,21 @@ import (
 )
 
 type Source struct {
-	Id     string  `gorethink:"id"               json:"id"`
-	Weight float64 `gorethink:"weight,omitempty" json:"weight,omitempty"`
-	Name   string  `gorethink:"origin_name"      json:"origin_name"`
+	Id     string  `gorethink:"id"                    json:"id"`
+	Weight float64 `gorethink:"weight,omitempty"      json:"weight,omitempty"`
+	Name   string  `gorethink:"origin_name,omitempty" json:"origin_name,omitempty"`
 }
 
 type MorphTarget struct {
-	Section string   `gorethink:"section" json:"section"`
-	Sources []Source `gorethink:"sources" json:"sources"`
+	Section string   `gorethink:"section,omitempty" json:"section,omitempty"`
+	Sources []Source `gorethink:"sources,omitempty" json:"sources,omitempty"`
 }
 
 type GeometryScheme struct {
-	Id           string        `gorethink:"id,omitempty"   json:"id"   binding:"-"`
-	Base         Source        `gorethink:"base"           json:"base"`
-	Name         string        `gorethink:"name,omitempty" json:"name,omitempty"`
-	MorphTargets []MorphTarget `gorethink:"morph_targets"  json:"morph_targets,omitempty"`
+	Id           string        `gorethink:"id,omitempty"            json:"id" binding:"-"`
+	Base         Source        `gorethink:"base,omitempty"          json:"base,omitempty"`
+	Name         string        `gorethink:"name,omitempty"          json:"name,omitempty"`
+	MorphTargets []MorphTarget `gorethink:"morph_targets,omitempty" json:"morph_targets,omitempty"`
 }
 
 type Geometry struct {
@@ -149,6 +149,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	mptr := C.initMorpher()
 	mobj := C.initMobj(unsafe.Pointer(mptr))
 
+	log.Println("Adding Base:", AppConfig.StorageFilePath(this.Base.Id))
 	C.processAddBaseObject(c_src, unsafe.Pointer(mptr))
 
 	i := 0
@@ -171,11 +172,12 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 				return errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
 			}
 
-			// log.Println("Adding source:", fp, source.Weight)
+			log.Println("Adding source:", fp, source.Weight)
 
 			c_fp := C.CString(fp)
 
-			C.AddMorphTargetObject_t(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
+			// C.AddMorphTargetObject_t(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
+			C.processAddMorphTargetObject(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
 
 			pointers = append(pointers, unsafe.Pointer(c_fp))
 		}
@@ -197,6 +199,13 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	}
 
 	return nil
+}
+
+func (this *GeometryScheme) _Morph(dst string, pmap Params) error {
+	for name, val := range pmap {
+		sources := findSection(name, this.MorphTargets)
+
+	}
 }
 
 func findSection(name string, targets []MorphTarget) []Source {
