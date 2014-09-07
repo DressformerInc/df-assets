@@ -126,9 +126,9 @@ func (this *Geometry) Remove(id string) error {
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
 func (this *GeometryScheme) Morph(dst string, pmap Params) error {
-	// if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
-	// 	return nil
-	// }
+	if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
+		return nil
+	}
 
 	basefp := AppConfig.StorageFilePath(this.Base.Id)
 	if _, err := os.Stat(basefp); err != nil {
@@ -175,15 +175,12 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 		targets = append(targets, mt)
 	}
 
-	// if obj := gomorph.NewObjectFromSources(basefp, targets); obj == nil {
-	// 	return errors.New("Server error")
-	// } else {
-	// 	obj.Save(dst)
-	// }
-	if obj := gomorph.NewObjectFromSources(basefp, targets); obj == nil {
-		return errors.New("Server error")
-	} else {
-		obj.Save(dst)
+	if len(targets) > 0 {
+		if obj := gomorph.NewObjectFromSources(basefp, targets); obj == nil {
+			return errors.New("Server error")
+		} else {
+			obj.Save(dst)
+		}
 	}
 
 	return nil
