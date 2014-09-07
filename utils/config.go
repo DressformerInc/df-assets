@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -55,7 +56,8 @@ func (this *ConfigScheme) StorageRoot() string {
 
 func (this *ConfigScheme) StoragePath(id string) string {
 	if len(id) != 24 {
-		panic(fmt.Sprintf("Wrong id length. %v got, len: %d", id, len(id)))
+		log.Println(fmt.Sprintf("Wrong id length. %v got, len: %d", id, len(id)))
+		return ""
 	}
 
 	parts := []string{id[0:2], id[2:4], id[4:6]}

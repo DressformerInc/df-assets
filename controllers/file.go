@@ -5,6 +5,7 @@ import (
 	. "df/assets/utils"
 	"df/errmap"
 	"github.com/3d0c/oid"
+	"github.com/go-martini/martini"
 	"github.com/martini-contrib/encoder"
 	"io/ioutil"
 	"log"
@@ -17,6 +18,11 @@ type File struct{}
 
 func (*File) Construct(args ...interface{}) interface{} {
 	return &File{}
+}
+
+func (this *File) Find(w http.ResponseWriter, r *http.Request, p martini.Params) {
+	name := AppConfig.StorageFilePath(p["id"])
+	http.ServeFile(w, r, name)
 }
 
 func (this *File) Create(enc encoder.Encoder, req *http.Request) (int, []byte) {

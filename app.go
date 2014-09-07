@@ -4,6 +4,7 @@ import (
 	ctrl "df/assets/controllers"
 	"df/assets/models"
 	. "df/assets/utils"
+	// "flag"
 	"fmt"
 	"github.com/3d0c/binding"
 	"github.com/3d0c/martini-contrib/config"
@@ -11,7 +12,11 @@ import (
 	"github.com/martini-contrib/encoder"
 	"log"
 	"net/http"
+	// "os"
+	// "os/signal"
 	"runtime"
+	// "runtime/pprof"
+	// "syscall"
 )
 
 func init() {
@@ -24,8 +29,39 @@ func init() {
 }
 
 func main() {
+	/*
+		var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+
+		flag.Parse()
+
+		if *cpuprofile != "" {
+			f, err := os.Create(*cpuprofile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			pprof.StartCPUProfile(f)
+		}
+
+		signalChannel := make(chan os.Signal, 2)
+		signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			sig := <-signalChannel
+			switch sig {
+			case os.Interrupt:
+				log.Println("Interrupted")
+				pprof.StopCPUProfile()
+				os.Exit(0)
+			case syscall.SIGTERM:
+				log.Println("Terminated")
+				pprof.StopCPUProfile()
+				os.Exit(0)
+			}
+		}()
+	*/
+
 	m := martini.New()
 	route := martini.NewRouter()
+	// pr := martini.Recovery()
 
 	m.Use(func(c martini.Context, w http.ResponseWriter) {
 		c.MapTo(encoder.JsonEncoder{PrettyPrint: true}, (*encoder.Encoder)(nil))
@@ -47,11 +83,6 @@ func main() {
 	})
 
 	route.Options("/**")
-
-	route.Post("/",
-		construct(&ctrl.File{}),
-		(*ctrl.File).Create,
-	)
 
 	route.Get("/image/:id",
 		binding.Bind(models.URLOptionsScheme{}),
@@ -87,6 +118,16 @@ func main() {
 		"/geometry/:id",
 		construct(&ctrl.Geometry{}),
 		(*ctrl.Geometry).Remove,
+	)
+
+	route.Get("/:id",
+		construct(&ctrl.File{}),
+		(*ctrl.File).Find,
+	)
+
+	route.Post("/",
+		construct(&ctrl.File{}),
+		(*ctrl.File).Create,
 	)
 
 	m.Action(route.Handle)
