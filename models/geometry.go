@@ -1,23 +1,13 @@
 package models
 
-/*
-
-#cgo CFLAGS: -Wall -I/usr/local/libmorph/include -std=c99 -Wunused-variable
-#cgo LDFLAGS: -L/usr/local/libmorph/lib -lmorph
-
-#include "proc.h"
-
-*/
-import "C"
-
 import (
 	. "df/assets/utils"
+	"df/gomorph"
 	"errors"
 	"fmt"
 	r "github.com/dancannon/gorethink"
 	"log"
 	"os"
-	"unsafe"
 )
 
 type Source struct {
@@ -139,20 +129,13 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	// if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
 	// 	return nil
 	// }
-	pointers := []unsafe.Pointer{}
 
-	c_src := C.CString(AppConfig.StorageFilePath(this.Base.Id))
-	c_dst := C.CString(dst)
-	defer C.free(unsafe.Pointer(c_src))
-	defer C.free(unsafe.Pointer(c_dst))
+	basefp := AppConfig.StorageFilePath(this.Base.Id)
+	if _, err := os.Stat(basefp); err != nil {
+		return errors.New(fmt.Sprintf("Base sources not found: %s\n", basefp))
+	}
 
-	mptr := C.initMorpher()
-	mobj := C.initMobj(unsafe.Pointer(mptr))
-
-	log.Println("Adding Base:", AppConfig.StorageFilePath(this.Base.Id))
-	C.processAddBaseObject(c_src, unsafe.Pointer(mptr))
-
-	i := 0
+	targets := []*gomorph.MorphTarget{}
 
 	for name, val := range pmap {
 		log.Println("Name:", name, "Val:", val)
@@ -166,46 +149,44 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 			return errors.New(fmt.Sprintf("Empty sources for section: %s", name))
 		}
 
-		for _, source := range sources {
+		mt := &gomorph.MorphTarget{
+			DstWeight: float32(val.(float64)),
+			Sources:   [2]*gomorph.Source{},
+		}
+
+		if len(sources) != 2 {
+			return errors.New("Sources should contain 2 morphtargets.")
+		}
+
+		for i := 0; i < 2; i++ {
+			source := sources[i]
+
 			fp := AppConfig.StorageFilePath(source.Id)
 			if _, err := os.Stat(fp); err != nil {
 				return errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
 			}
 
-			log.Println("Adding source:", fp, source.Weight)
+			mt.Sources[i] = &gomorph.Source{
+				File:      fp,
+				SrcWeight: float32(source.Weight),
+			}
 
-			c_fp := C.CString(fp)
-
-			// C.AddMorphTargetObject_t(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
-			C.processAddMorphTargetObject(c_fp, C.size_t(i), C.double(source.Weight), unsafe.Pointer(mptr))
-
-			pointers = append(pointers, unsafe.Pointer(c_fp))
 		}
-		log.Println("Adding uid and weight:", i, val)
-		C.procAddUid(unsafe.Pointer(mobj), C.int(i))
-		C.procAddWeight(unsafe.Pointer(mobj), C.double(val.(float64)))
-
-		i++
+		targets = append(targets, mt)
 	}
 
-	C.build(unsafe.Pointer(mobj), unsafe.Pointer(mptr))
-	C.saveObject(c_dst, unsafe.Pointer(mobj))
-
-	C.releaseMorpher(unsafe.Pointer(mptr))
-	C.releaseMobj(unsafe.Pointer(mobj))
-
-	for _, ptr := range pointers {
-		C.free(ptr)
+	// if obj := gomorph.NewObjectFromSources(basefp, targets); obj == nil {
+	// 	return errors.New("Server error")
+	// } else {
+	// 	obj.Save(dst)
+	// }
+	if obj := gomorph.NewObjectFromSources(basefp, targets); obj == nil {
+		return errors.New("Server error")
+	} else {
+		obj.Save(dst)
 	}
 
 	return nil
-}
-
-func (this *GeometryScheme) _Morph(dst string, pmap Params) error {
-	for name, val := range pmap {
-		sources := findSection(name, this.MorphTargets)
-
-	}
 }
 
 func findSection(name string, targets []MorphTarget) []Source {
