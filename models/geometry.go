@@ -126,7 +126,7 @@ func (this *Geometry) Remove(id string) error {
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
 func (this *GeometryScheme) Morph(dst string, pmap Params) error {
-	if _, err := os.Stat(dst); err == nil || len(pmap) == 0 {
+	if _, err := os.Stat(dst); err == nil {
 		return nil
 	}
 
