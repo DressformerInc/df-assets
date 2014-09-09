@@ -49,7 +49,7 @@ func (this *Geometry) Find(enc encoder.Encoder, params martini.Params, options m
 	}
 
 	pmap := options.ToMap()
-	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash(pmap)
+	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash()
 	log.Println("Serving file:", name)
 
 	if options.K == 0 && options.D == 0 && options.D1 == 0 && options.D2 == 0 {

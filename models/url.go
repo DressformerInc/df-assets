@@ -35,23 +35,50 @@ func (this URLOptionsScheme) SetDefaults() URLOptionsScheme {
 	return this
 }
 
-// returns string ".he{height}-ch{chest}-un{underbust}-hi{hips}"
-func (this URLOptionsScheme) ToHash(p Params) string {
+// @todo rewrite it
+func (this URLOptionsScheme) ToHash() string {
 	var s string
 
-	if len(p) != 0 {
-		s = "."
+	if this.Height != 0 {
+		s += ".he" + strconv.FormatFloat(this.Height, 'f', 1, 64) + "-"
 	}
 
-	for name, val := range p {
-		s += name[0:2] + strconv.FormatFloat(val.(float64), 'f', 1, 64) + "-"
+	if this.Chest != 0 {
+		if s == "" {
+			s = "."
+		}
+
+		s += "ce" + strconv.FormatFloat(this.Chest, 'f', 1, 64) + "-"
+	}
+
+	if this.Underbust != 0 {
+		if s == "" {
+			s = "."
+		}
+
+		s += "un" + strconv.FormatFloat(this.Underbust, 'f', 1, 64) + "-"
+	}
+
+	if this.Waist != 0 {
+		if s == "" {
+			s = "."
+		}
+
+		s += "wa" + strconv.FormatFloat(this.Waist, 'f', 1, 64) + "-"
+	}
+
+	if this.Hips != 0 {
+		if s == "" {
+			s = "."
+		}
+
+		s += "hi" + strconv.FormatFloat(this.Hips, 'f', 1, 64) + "-"
 	}
 
 	return s
 }
 
-// @todo
-// rewrite it using reflection
+// @todo rewrite it
 func (this URLOptionsScheme) ToMap() Params {
 	result := Params{}
 
