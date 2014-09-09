@@ -9,7 +9,7 @@ import (
 	"github.com/go-martini/martini"
 	"log"
 	"net/http"
-	// "os"
+	"os"
 	"strings"
 )
 
@@ -49,18 +49,22 @@ func (this *Geometry) Find(enc encoder.Encoder, params martini.Params, options m
 	}
 
 	pmap := options.ToMap()
-	// name will be /path/to/id + optionally ".{param}{param}{param}{param}"
 	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash(pmap)
 	log.Println("Serving file:", name)
 
-	if err := result.Morph(name, pmap); err != nil {
-		log.Println("Unable to morph:", err)
-		return http.StatusNotFound, []byte{}
+	if options.K == 0 && options.D == 0 && options.D1 == 0 && options.D2 == 0 {
+		if _, err := os.Stat(name); err == nil {
+			http.ServeFile(w, r, name)
+			return http.StatusOK, []byte{}
+		}
 	}
 
-	http.ServeFile(w, r, name)
+	blob, _ := result.Morph(name, pmap, options)
+	if blob != nil {
+		return http.StatusOK, blob
+	}
 
-	return http.StatusOK, []byte{}
+	return http.StatusNotFound, []byte{}
 }
 
 func (this *Geometry) Create(payload models.GeometryScheme, enc encoder.Encoder) (int, []byte) {

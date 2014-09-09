@@ -25,6 +25,7 @@ type GeometryScheme struct {
 	Id           string        `gorethink:"id,omitempty"            json:"id" binding:"-"`
 	Base         Source        `gorethink:"base,omitempty"          json:"base,omitempty"`
 	Name         string        `gorethink:"name,omitempty"          json:"name,omitempty"`
+	IsBody       bool          `gorethink:"is_body,omitempty"       json:"-"`
 	MorphTargets []MorphTarget `gorethink:"morph_targets,omitempty" json:"morph_targets,omitempty"`
 }
 
@@ -125,16 +126,8 @@ func (this *Geometry) Remove(id string) error {
 // 1. change geometry id to oid
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
-func (this *GeometryScheme) Morph(dst string, pmap Params) error {
-	if _, err := os.Stat(dst); err == nil {
-		return nil
-	}
-
+func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsScheme) ([]byte, error) {
 	basefp := AppConfig.StorageFilePath(this.Base.Id)
-	if _, err := os.Stat(basefp); err != nil {
-		return errors.New(fmt.Sprintf("Base sources not found: %s\n", basefp))
-	}
-
 	targets := []*gomorph.MorphTarget{}
 
 	for name, val := range pmap {
@@ -142,11 +135,11 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 
 		sources := findSection(name, this.MorphTargets)
 		if sources == nil {
-			return errors.New(fmt.Sprintf("Section for parameter: %s not found", name))
+			return nil, errors.New(fmt.Sprintf("Section for parameter: %s not found", name))
 		}
 
 		if len(sources) == 0 {
-			return errors.New(fmt.Sprintf("Empty sources for section: %s", name))
+			return nil, errors.New(fmt.Sprintf("Empty sources for section: %s", name))
 		}
 
 		mt := &gomorph.MorphTarget{
@@ -155,7 +148,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 		}
 
 		if len(sources) != 2 {
-			return errors.New("Sources should contain 2 morphtargets.")
+			return nil, errors.New("Sources should contain 2 morphtargets.")
 		}
 
 		for i := 0; i < 2; i++ {
@@ -163,7 +156,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 
 			fp := AppConfig.StorageFilePath(source.Id)
 			if _, err := os.Stat(fp); err != nil {
-				return errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
+				return nil, errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
 			}
 
 			mt.Sources[i] = &gomorph.Source{
@@ -176,14 +169,23 @@ func (this *GeometryScheme) Morph(dst string, pmap Params) error {
 	}
 
 	if len(targets) > 0 {
-		if obj := gomorph.NewObjectFromSources(basefp, targets); obj == nil {
-			return errors.New("Server error")
+		p := gomorph.Params{
+			K:  options.K,
+			D:  options.D,
+			D1: options.D1,
+			D2: options.D2,
+		}
+
+		if obj := gomorph.NewObjectFromSources(basefp, targets, p); obj == nil {
+			return nil, errors.New("Server error")
 		} else {
-			obj.Save(dst)
+			b := obj.Blob(dst)
+			log.Println("OK:", len(b))
+			return b, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func findSection(name string, targets []MorphTarget) []Source {

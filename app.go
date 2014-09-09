@@ -4,7 +4,6 @@ import (
 	ctrl "df/assets/controllers"
 	"df/assets/models"
 	. "df/assets/utils"
-	// "flag"
 	"fmt"
 	"github.com/3d0c/binding"
 	"github.com/3d0c/martini-contrib/config"
@@ -12,9 +11,11 @@ import (
 	"github.com/martini-contrib/encoder"
 	"log"
 	"net/http"
+	"runtime"
+
+	// "flag"
 	// "os"
 	// "os/signal"
-	"runtime"
 	// "runtime/pprof"
 	// "syscall"
 )
@@ -58,7 +59,6 @@ func main() {
 			}
 		}()
 	*/
-
 	m := martini.New()
 	route := martini.NewRouter()
 	// pr := martini.Recovery()
