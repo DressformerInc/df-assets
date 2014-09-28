@@ -12,9 +12,9 @@ import (
 )
 
 type Source struct {
-	Id     string  `gorethink:"id"                    json:"id"`
-	Weight float64 `gorethink:"weight,omitempty"      json:"weight,omitempty"`
-	Name   string  `gorethink:"origin_name,omitempty" json:"origin_name,omitempty"`
+	Id     string  `gorethink:"id"                  json:"id"`
+	Weight float64 `gorethink:"weight,omitempty"    json:"weight,omitempty"`
+	Name   string  `gorethink:"orig_name,omitempty" json:"orig_name,omitempty"`
 }
 
 type MorphTarget struct {
