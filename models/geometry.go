@@ -1,7 +1,6 @@
 package models
 
 import (
-	apimodels "df/api/models"
 	. "df/assets/utils"
 	"df/gomorph"
 	"errors"
@@ -153,15 +152,15 @@ func (this *Geometry) Remove(id string) error {
 
 // @todo This is just a prototype. Rewrite it!
 func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsScheme) ([]byte, error) {
-	simSources := []*gomorph.Source{}
+	bodySources := []*gomorph.Source{}
 	params := map[string]float32{}
 
-	dummyModel := (*apimodels.Dummy).Construct(nil).(*apimodels.Dummy)
+	dummyModel := (*Dummy).Construct(nil).(*Dummy)
 	defaultDummy := dummyModel.Find("")
 	defDummyGeometry := (*Geometry).Construct(nil).(*Geometry).Find(defaultDummy.Assets.Geometry.Id)
 
-	simSources = append(simSources, &gomorph.Source{
-		Input:     AppConfig.StorageFilePath(this.Base.Id),
+	bodySources = append(bodySources, &gomorph.Source{
+		Input:     AppConfig.StorageFilePath(defDummyGeometry.Base.Id),
 		Output:    dst,
 		ParamName: "base",
 		SrcWeight: float32(defaultDummy.Body.Height),
@@ -174,7 +173,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 			name = "underchest"
 		}
 
-		params[name] = val.(float32)
+		params[name] = float32(val.(float64))
 
 		// make sources list for dummy
 
@@ -199,7 +198,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 				return nil, errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
 			}
 
-			simSources = append(simSources, &gomorph.Source{
+			bodySources = append(bodySources, &gomorph.Source{
 				Input:     fp,
 				ParamName: name,
 				SrcWeight: float32(source.Weight),
@@ -208,13 +207,20 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 	}
 
 	dummy := gomorph.NewDummy("default")
+	dummy.AddMorphTargets(bodySources)
 
 	if this.IsBody {
-		dummy.AddMorphTargets(simSources)
 		dummy.Morph(dst, params)
 	} else {
+		garmentSources := []*gomorph.Source{
+			&gomorph.Source{
+				Input:  AppConfig.StorageFilePath(this.Base.Id),
+				Output: dst,
+			},
+		}
+
 		dummy.Morph("", params)
-		dummy.PutOn(params, simSources)
+		dummy.PutOn(params, garmentSources)
 	}
 
 	return nil, nil

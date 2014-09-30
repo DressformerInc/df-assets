@@ -1,18 +1,20 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 )
 
 var AppConfig *ConfigScheme
-var path_exists map[string]bool
+
+var pathExists map[string]bool
 
 func init() {
 	AppConfig = &ConfigScheme{}
-	path_exists = make(map[string]bool, 0)
 }
 
 type ConfigScheme struct {
@@ -28,6 +30,26 @@ type ConfigScheme struct {
 		Name        string `json:"name"`
 		StorageRoot string `json:"storage_root"`
 	} `json:"node"`
+
+	Connections struct {
+		Rethink struct {
+			Spec   string `json:"spec"`
+			DbName string `json:"db_name"`
+		} `json:"rethink"`
+	} `json:"connections"`
+}
+
+func InitConfigFrom(file string) {
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Println("Unable to read", file, "Error:", err)
+		return
+	}
+
+	err = json.Unmarshal(data, AppConfig)
+	if err != nil {
+		log.Println("Unable to read config.", err)
+	}
 }
 
 func (this *ConfigScheme) ListenOn() string {
@@ -70,12 +92,12 @@ func (this *ConfigScheme) StorageFilePath(id string) string {
 }
 
 func (this *ConfigScheme) PathCreate(path string) string {
-	if !path_exists[path] {
+	if !pathExists[path] {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			panic(fmt.Sprintf("Unable to create directory %v, error: %v", path, err))
 		}
 
-		path_exists[path] = true
+		pathExists[path] = true
 	}
 
 	return path
@@ -83,4 +105,12 @@ func (this *ConfigScheme) PathCreate(path string) string {
 
 func (this *ConfigScheme) StorageFor(id string) string {
 	return this.PathCreate(this.StoragePath(id)) + id
+}
+
+func (this *ConfigScheme) RethinkAddress() string {
+	return this.Connections.Rethink.Spec
+}
+
+func (this *ConfigScheme) RethinkDbName() string {
+	return this.Connections.Rethink.DbName
 }

@@ -6,7 +6,6 @@ import (
 	. "df/assets/utils"
 	"fmt"
 	"github.com/3d0c/binding"
-	"github.com/3d0c/martini-contrib/config"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/encoder"
 	"log"
@@ -22,10 +21,7 @@ import (
 
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
-
-	config.Init("./config.json")
-	config.LoadInto(AppConfig)
-
+	InitConfigFrom("./config.json")
 	runtime.GOMAXPROCS(8)
 }
 
