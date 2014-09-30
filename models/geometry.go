@@ -1,6 +1,7 @@
 package models
 
 import (
+	apimodels "df/api/models"
 	. "df/assets/utils"
 	"df/gomorph"
 	"errors"
@@ -26,7 +27,7 @@ type GeometryScheme struct {
 	Id           string        `gorethink:"id,omitempty"            json:"id" binding:"-"`
 	Base         Source        `gorethink:"base,omitempty"          json:"base,omitempty"`
 	Name         string        `gorethink:"name,omitempty"          json:"name,omitempty"`
-	IsBody       bool          `gorethink:"is_body,omitempty"       json:"-"`
+	IsBody       bool          `gorethink:"is_body,omitempty"       json:"is_body,omitempty"`
 	MorphTargets []MorphTarget `gorethink:"morph_targets,omitempty" json:"morph_targets,omitempty"`
 }
 
@@ -149,25 +150,41 @@ func (this *Geometry) Remove(id string) error {
 // 1. change geometry id to oid
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
+
+// @todo This is just a prototype. Rewrite it!
 func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsScheme) ([]byte, error) {
-	basefp := AppConfig.StorageFilePath(this.Base.Id)
-	targets := []*gomorph.MorphTarget{}
+	simSources := []*gomorph.Source{}
+	params := map[string]float32{}
+
+	dummyModel := (*apimodels.Dummy).Construct(nil).(*apimodels.Dummy)
+	defaultDummy := dummyModel.Find("")
+	defDummyGeometry := (*Geometry).Construct(nil).(*Geometry).Find(defaultDummy.Assets.Geometry.Id)
+
+	simSources = append(simSources, &gomorph.Source{
+		Input:     AppConfig.StorageFilePath(this.Base.Id),
+		Output:    dst,
+		ParamName: "base",
+		SrcWeight: float32(defaultDummy.Body.Height),
+	})
 
 	for name, val := range pmap {
 		log.Println("Name:", name, "Val:", val)
 
-		sources := findSection(name, this.MorphTargets)
+		if name == "underbust" {
+			name = "underchest"
+		}
+
+		params[name] = val.(float32)
+
+		// make sources list for dummy
+
+		sources := findSection(name, defDummyGeometry.MorphTargets)
 		if sources == nil {
 			return nil, errors.New(fmt.Sprintf("Section for parameter: %s not found", name))
 		}
 
 		if len(sources) == 0 {
 			return nil, errors.New(fmt.Sprintf("Empty sources for section: %s", name))
-		}
-
-		mt := &gomorph.MorphTarget{
-			DstWeight: float32(val.(float64)),
-			Sources:   [2]*gomorph.Source{},
 		}
 
 		if len(sources) != 2 {
@@ -182,30 +199,22 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 				return nil, errors.New(fmt.Sprintf("One of morphtargets sources not found: %s\n", fp))
 			}
 
-			mt.Sources[i] = &gomorph.Source{
-				File:      fp,
+			simSources = append(simSources, &gomorph.Source{
+				Input:     fp,
+				ParamName: name,
 				SrcWeight: float32(source.Weight),
-			}
-
+			})
 		}
-		targets = append(targets, mt)
 	}
 
-	if len(targets) > 0 {
-		p := gomorph.Params{
-			K:  options.K,
-			D:  options.D,
-			D1: options.D1,
-			D2: options.D2,
-		}
+	dummy := gomorph.NewDummy("default")
 
-		if obj := gomorph.NewObjectFromSources(basefp, targets, p); obj == nil {
-			return nil, errors.New("Server error")
-		} else {
-			b := obj.Blob(dst)
-			log.Println("OK:", len(b))
-			return b, nil
-		}
+	if this.IsBody {
+		dummy.AddMorphTargets(simSources)
+		dummy.Morph(dst, params)
+	} else {
+		dummy.Morph("", params)
+		dummy.PutOn(params, simSources)
 	}
 
 	return nil, nil
