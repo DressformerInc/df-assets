@@ -9,7 +9,7 @@ import (
 	"github.com/go-martini/martini"
 	"log"
 	"net/http"
-	_ "os"
+	"os"
 	"strings"
 )
 

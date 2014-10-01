@@ -223,6 +223,8 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 		dummy.PutOn(params, garmentSources)
 	}
 
+	dummy.Release()
+
 	return nil, nil
 }
 
