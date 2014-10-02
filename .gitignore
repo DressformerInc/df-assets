@@ -3,3 +3,4 @@ gin-bin
 sync.build
 assets
 build
+tmp-storage/
