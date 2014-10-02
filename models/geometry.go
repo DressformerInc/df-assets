@@ -169,12 +169,6 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 	for name, val := range pmap {
 		log.Println("Name:", name, "Val:", val)
 
-		if name == "underbust" {
-			name = "underchest"
-		}
-
-		params[name] = float32(val.(float64))
-
 		// make sources list for dummy
 
 		sources := findSection(name, defDummyGeometry.MorphTargets)
@@ -189,6 +183,12 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 		if len(sources) != 2 {
 			return nil, errors.New("Sources should contain 2 morphtargets.")
 		}
+
+		if name == "underbust" {
+			name = "underchest"
+		}
+
+		params[name] = float32(val.(float64))
 
 		for i := 0; i < 2; i++ {
 			source := sources[i]
