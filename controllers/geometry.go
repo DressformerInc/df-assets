@@ -1,16 +1,11 @@
 package controllers
 
 import (
-	// "df/api/utils"
 	"df/assets/models"
-	// . "df/assets/utils"
-	"github.com/martini-contrib/encoder"
-	// "io/ioutil"
 	"github.com/go-martini/martini"
+	"github.com/martini-contrib/encoder"
 	"log"
 	"net/http"
-	// "os"
-	// "strings"
 )
 
 type Geometry struct {
