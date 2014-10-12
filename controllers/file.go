@@ -4,6 +4,7 @@ import (
 	"df/assets/models"
 	. "df/assets/utils"
 	"df/errmap"
+	img "github.com/3d0c/imgproc"
 	"github.com/3d0c/oid"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/encoder"
@@ -11,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -20,9 +22,71 @@ func (*File) Construct(args ...interface{}) interface{} {
 	return &File{}
 }
 
-func (this *File) Find(w http.ResponseWriter, r *http.Request, p martini.Params) {
+func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Request, p martini.Params, options models.URLOptionsScheme) {
+	guid := regexp.MustCompile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+	if guid.MatchString(p["id"]) {
+		this.ServeGeometry(enc, p, options, w, r)
+		return
+	}
+
+	if options.IsImgOptions() {
+		this.ServeImage(enc, p, options, w)
+		return
+	}
+
 	name := AppConfig.StorageFilePath(p["id"])
 	http.ServeFile(w, r, name)
+}
+
+func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter, r *http.Request) (int, []byte) {
+	model := (*models.Geometry).Construct(nil).(*models.Geometry)
+
+	result := model.Find(params["id"])
+
+	if strings.Contains("application/json", r.Header.Get("Accept")) {
+		return http.StatusOK, encoder.Must(enc.Encode(result))
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	if result == nil || result.Base.Id == "" {
+		return http.StatusNotFound, []byte{}
+	}
+
+	pmap := options.ToMap()
+	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash()
+	log.Println("Serving file:", name)
+
+	if _, err := os.Stat(name); err != nil {
+		result.Morph(name, pmap, options)
+	}
+
+	http.ServeFile(w, r, name)
+
+	return http.StatusNotFound, []byte{}
+}
+
+func (this *File) ServeImage(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter) (int, []byte) {
+	log.Println(params, options)
+	options = options.SetDefaults()
+
+	base := img.NewSource(AppConfig.StorageFilePath(params["id"]))
+	if base == nil {
+		return http.StatusNotFound, []byte{}
+	}
+
+	target := &img.Options{
+		Base:    base,
+		Scale:   img.NewScale(options.Scale),
+		Format:  options.Format,
+		Method:  3,
+		Quality: options.Quality,
+	}
+
+	w.Header().Set("Content-Type", "image/"+target.Format)
+	log.Println(target)
+
+	return http.StatusOK, img.Proc(target)
 }
 
 func (this *File) Create(enc encoder.Encoder, req *http.Request) (int, []byte) {

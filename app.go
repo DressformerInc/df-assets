@@ -80,18 +80,6 @@ func main() {
 
 	route.Options("/**")
 
-	route.Get("/image/:id",
-		binding.Bind(models.URLOptionsScheme{}),
-		construct(&ctrl.Image{}),
-		(*ctrl.Image).Find,
-	)
-
-	route.Get("/geometry/:id",
-		binding.Bind(models.URLOptionsScheme{}),
-		construct(&ctrl.Geometry{}),
-		(*ctrl.Geometry).Find,
-	)
-
 	route.Get("/geometry",
 		binding.Bind(models.URLOptionsScheme{}),
 		construct(&ctrl.Geometry{}),
@@ -117,6 +105,7 @@ func main() {
 	)
 
 	route.Get("/:id",
+		binding.Bind(models.URLOptionsScheme{}),
 		construct(&ctrl.File{}),
 		(*ctrl.File).Find,
 	)

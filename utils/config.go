@@ -15,6 +15,7 @@ var pathExists map[string]bool
 
 func init() {
 	AppConfig = &ConfigScheme{}
+	pathExists = make(map[string]bool, 0)
 }
 
 type ConfigScheme struct {
