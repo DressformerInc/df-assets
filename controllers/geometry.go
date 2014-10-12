@@ -3,14 +3,14 @@ package controllers
 import (
 	// "df/api/utils"
 	"df/assets/models"
-	. "df/assets/utils"
+	// . "df/assets/utils"
 	"github.com/martini-contrib/encoder"
 	// "io/ioutil"
 	"github.com/go-martini/martini"
 	"log"
 	"net/http"
-	"os"
-	"strings"
+	// "os"
+	// "strings"
 )
 
 type Geometry struct {
@@ -32,39 +32,6 @@ func (this *Geometry) FindAll(enc encoder.Encoder, params martini.Params, opt mo
 	result := this.model.FindAll(opt)
 
 	return http.StatusOK, encoder.Must(enc.Encode(result))
-}
-
-func (this *Geometry) Find(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter, r *http.Request) (int, []byte) {
-
-	result := this.model.Find(params["id"])
-
-	if strings.Contains("application/json", r.Header.Get("Accept")) {
-		return http.StatusOK, encoder.Must(enc.Encode(result))
-	}
-
-	w.Header().Set("Content-Type", "application/octet-stream")
-
-	if result == nil || result.Base.Id == "" {
-		return http.StatusNotFound, []byte{}
-	}
-
-	pmap := options.ToMap()
-	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash()
-	log.Println("Serving file:", name)
-
-	if options.K == 0 && options.D == 0 && options.D1 == 0 && options.D2 == 0 {
-		if _, err := os.Stat(name); err == nil {
-			http.ServeFile(w, r, name)
-			return http.StatusOK, []byte{}
-		}
-	}
-
-	blob, _ := result.Morph(name, pmap, options)
-	if blob != nil {
-		return http.StatusOK, blob
-	}
-
-	return http.StatusNotFound, []byte{}
 }
 
 func (this *Geometry) Create(payload models.GeometryScheme, enc encoder.Encoder) (int, []byte) {

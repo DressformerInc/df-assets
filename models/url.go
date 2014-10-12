@@ -35,6 +35,14 @@ func (this URLOptionsScheme) SetDefaults() URLOptionsScheme {
 	return this
 }
 
+func (this URLOptionsScheme) IsImgOptions() bool {
+	if this.Scale != "" || this.Quality != 0 {
+		return true
+	}
+
+	return false
+}
+
 // @todo rewrite it
 func (this URLOptionsScheme) ToHash() string {
 	var s string

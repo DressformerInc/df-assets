@@ -6,7 +6,6 @@ import (
 	. "df/assets/utils"
 	"fmt"
 	"github.com/3d0c/binding"
-	"github.com/3d0c/martini-contrib/config"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/encoder"
 	"log"
@@ -22,10 +21,7 @@ import (
 
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime)
-
-	config.Init("./config.json")
-	config.LoadInto(AppConfig)
-
+	InitConfigFrom("./config.json")
 	runtime.GOMAXPROCS(8)
 }
 
@@ -84,18 +80,6 @@ func main() {
 
 	route.Options("/**")
 
-	route.Get("/image/:id",
-		binding.Bind(models.URLOptionsScheme{}),
-		construct(&ctrl.Image{}),
-		(*ctrl.Image).Find,
-	)
-
-	route.Get("/geometry/:id",
-		binding.Bind(models.URLOptionsScheme{}),
-		construct(&ctrl.Geometry{}),
-		(*ctrl.Geometry).Find,
-	)
-
 	route.Get("/geometry",
 		binding.Bind(models.URLOptionsScheme{}),
 		construct(&ctrl.Geometry{}),
@@ -121,6 +105,7 @@ func main() {
 	)
 
 	route.Get("/:id",
+		binding.Bind(models.URLOptionsScheme{}),
 		construct(&ctrl.File{}),
 		(*ctrl.File).Find,
 	)
