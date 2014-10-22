@@ -22,20 +22,20 @@ func (*File) Construct(args ...interface{}) interface{} {
 	return &File{}
 }
 
-func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Request, p martini.Params, options models.URLOptionsScheme) {
+func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Request, p martini.Params, options models.URLOptionsScheme) (int, []byte) {
 	guid := regexp.MustCompile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 	if guid.MatchString(p["id"]) {
-		this.ServeGeometry(enc, p, options, w, r)
-		return
+		return this.ServeGeometry(enc, p, options, w, r)
 	}
 
-	if options.IsImgOptions() {
-		this.ServeImage(enc, p, options, w)
-		return
+	if NewTypeFromFlag(oid.ObjectIdHex(p["id"]).Flag()).IsImage {
+		return this.ServeImage(enc, p, options, w)
 	}
 
 	name := AppConfig.StorageFilePath(p["id"])
 	http.ServeFile(w, r, name)
+
+	return 200, []byte{}
 }
 
 func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter, r *http.Request) (int, []byte) {
@@ -67,7 +67,6 @@ func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, opti
 }
 
 func (this *File) ServeImage(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter) (int, []byte) {
-	log.Println(params, options)
 	options = options.SetDefaults()
 
 	base := img.NewSource(AppConfig.StorageFilePath(params["id"]))
@@ -78,13 +77,20 @@ func (this *File) ServeImage(enc encoder.Encoder, params martini.Params, options
 	target := &img.Options{
 		Base:    base,
 		Scale:   img.NewScale(options.Scale),
-		Format:  options.Format,
 		Method:  3,
 		Quality: options.Quality,
 	}
 
-	w.Header().Set("Content-Type", "image/"+target.Format)
-	log.Println(target)
+	var typ Type
+	if options.Format == "" {
+		typ = NewTypeFromFlag(oid.ObjectIdHex(params["id"]).Flag())
+	} else {
+		typ = NewTypeFromName(options.Format)
+	}
+
+	target.Format = typ.Format()
+
+	w.Header().Set("Content-Type", typ.ContentType())
 
 	return http.StatusOK, img.Proc(target)
 }
@@ -118,8 +124,10 @@ func (this *File) Create(enc encoder.Encoder, req *http.Request) (int, []byte) {
 				continue
 			}
 
-			id := oid.NewObjectId(0, AppConfig.NodeId()).String()
-			log.Printf("Id generated: [%s][%d][%d]\n", id, AppConfig.NodeId(), oid.ObjectIdHex(id).NodeId())
+			typ := NewTypeFromExt(fileHeader.Filename)
+
+			id := oid.NewObjectId(typ.Flag(), AppConfig.NodeId()).String()
+			log.Printf("%s, node: %d, flag: %d\n", id, AppConfig.NodeId(), oid.ObjectIdHex(id).Flag())
 
 			buf, err := ioutil.ReadAll(file)
 			if isErr(err, fileHeader.Filename) {

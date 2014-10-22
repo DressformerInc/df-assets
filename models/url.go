@@ -24,10 +24,6 @@ type URLOptionsScheme struct {
 type Params map[string]interface{}
 
 func (this URLOptionsScheme) SetDefaults() URLOptionsScheme {
-	if this.Format != "jpeg" || this.Format != "png" {
-		this.Format = "jpeg"
-	}
-
 	if this.Quality == 0 {
 		this.Quality = 80
 	}
