@@ -91,7 +91,7 @@ __Examples:__
 Getting two geometries
 
 ```sh
-~ curl -XGET http://v2.dressformer.com/?geom_ids=\5ca78b9a-23ed-4551-a6f2-9e3bb9f7c919,b1f8be54-8310-4962-be22-f2446653ea1b
+curl -XGET http://v2.dressformer.com/?geom_ids=5ca78b9a-23ed-4551-a6f2-9e3bb9f7c919,b1f8be54-8310-4962-be22-f2446653ea1b
 
 HTTP/1.1 200 OK
 Server: nginx/1.4.6 (Ubuntu)
@@ -134,7 +134,7 @@ Content-Type: image/png
 Getting some image, converted to jpeg with 70% quality
 
 ```sh
-curl -XGET -I http://v2.dressformer.com/assets/5451082c0000020000000001\?format\=jpg&q=70
+curl -XGET -I http://v2.dressformer.com/assets/5451082c0000020000000001?format=jpg&q=70
 
 HTTP/1.1 200 OK
 Server: nginx/1.4.6 (Ubuntu)
@@ -197,7 +197,7 @@ __Geometry Object__
 
 ```
 
-### /geometry:id
+### /geometry/:id
 
 Geometry object control.  
 
