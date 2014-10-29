@@ -27,7 +27,6 @@ func (*File) Construct(args ...interface{}) interface{} {
 }
 
 func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Request, p martini.Params, options models.URLOptionsScheme) (int, []byte) {
-	log.Println("options.Ids:", options.Ids)
 	if guid.MatchString(p["id"]) || options.Ids != "" {
 		return this.ServeGeometry(enc, p, options, w, r)
 	}
@@ -55,6 +54,10 @@ func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, opti
 		}
 	} else {
 		ids = append(ids, params["id"])
+	}
+
+	if len(ids) > 1 && len(options.ToMap()) == 0 {
+		options.Height = 175
 	}
 
 	result := model.FindAll(ids, options)
