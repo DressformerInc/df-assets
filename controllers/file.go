@@ -27,6 +27,7 @@ func (*File) Construct(args ...interface{}) interface{} {
 }
 
 func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Request, p martini.Params, options models.URLOptionsScheme) (int, []byte) {
+	log.Println("options.Ids:", options.Ids)
 	if guid.MatchString(p["id"]) || options.Ids != "" {
 		return this.ServeGeometry(enc, p, options, w, r)
 	}
@@ -73,12 +74,12 @@ func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, opti
 
 	names := []string{}
 	for _, geometry := range result {
-		var name string
-		if options.Ids != "" {
-			name = options.Ids + "."
+		var prefix string
+		if len(ids) > 1 {
+			prefix = options.Ids + "."
 		}
 
-		name += AppConfig.StorageFilePath(geometry.Base.Id) + options.ToHash()
+		name := AppConfig.StoragePath(geometry.Base.Id) + prefix + geometry.Base.Id + options.ToHash()
 
 		names = append(names, name)
 	}
@@ -100,10 +101,10 @@ func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, opti
 			return http.StatusNotFound, []byte{}
 		}
 
-		sizes = append(sizes, strconv.FormatInt(fi.Size(), 36))
+		sizes = append(sizes, strconv.FormatInt(fi.Size(), 10))
 	}
 
-	w.Header().Set("DF-Sizes", strings.Join(sizes, ","))
+	w.Header().Set("Df-Sizes", strings.Join(sizes, ","))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(200)
 
