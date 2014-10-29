@@ -8,23 +8,26 @@ import (
 	"github.com/3d0c/oid"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/encoder"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 type File struct{}
+
+var guid *regexp.Regexp = regexp.MustCompile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 func (*File) Construct(args ...interface{}) interface{} {
 	return &File{}
 }
 
 func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Request, p martini.Params, options models.URLOptionsScheme) (int, []byte) {
-	guid := regexp.MustCompile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-	if guid.MatchString(p["id"]) {
+	if guid.MatchString(p["id"]) || options.Ids != "" {
 		return this.ServeGeometry(enc, p, options, w, r)
 	}
 
@@ -41,7 +44,19 @@ func (this *File) Find(enc encoder.Encoder, w http.ResponseWriter, r *http.Reque
 func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter, r *http.Request) (int, []byte) {
 	model := (*models.Geometry).Construct(nil).(*models.Geometry)
 
-	result := model.Find(params["id"])
+	ids := []string{}
+
+	if options.Ids != "" {
+		for _, id := range strings.Split(options.Ids, ",") {
+			if guid.MatchString(id) {
+				ids = append(ids, id)
+			}
+		}
+	} else {
+		ids = append(ids, params["id"])
+	}
+
+	result := model.FindAll(ids, options)
 
 	if strings.Contains("application/json", r.Header.Get("Accept")) {
 		return http.StatusOK, encoder.Must(enc.Encode(result))
@@ -49,21 +64,61 @@ func (this *File) ServeGeometry(enc encoder.Encoder, params martini.Params, opti
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 
-	if result == nil || result.Base.Id == "" {
+	if result == nil || len(result) == 0 {
 		return http.StatusNotFound, []byte{}
 	}
 
 	pmap := options.ToMap()
-	name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash()
-	log.Println("Serving file:", name)
+	// name := AppConfig.StorageFilePath(result.Base.Id) + options.ToHash()
 
-	if _, err := os.Stat(name); err != nil {
-		result.Morph(name, pmap, options)
+	names := []string{}
+	for _, geometry := range result {
+		var name string
+		if options.Ids != "" {
+			name = options.Ids + "."
+		}
+
+		name += AppConfig.StorageFilePath(geometry.Base.Id) + options.ToHash()
+
+		names = append(names, name)
 	}
 
-	http.ServeFile(w, r, name)
+	log.Println("Serving files:", names)
 
-	return http.StatusNotFound, []byte{}
+	// check only for first file in set, because if there is no such file, whole set
+	// havn't been ever morphed
+	if _, err := os.Stat(names[0]); err != nil {
+		models.Morph(names, result, pmap, options)
+	}
+
+	var sizes []string
+
+	for _, name := range names {
+		fi, err := os.Stat(name)
+		if err != nil {
+			log.Println("File not found after morphing, error:", err)
+			return http.StatusNotFound, []byte{}
+		}
+
+		sizes = append(sizes, strconv.FormatInt(fi.Size(), 36))
+	}
+
+	w.Header().Set("DF-Sizes", strings.Join(sizes, ","))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.WriteHeader(200)
+
+	for _, name := range names {
+		file, err := os.Open(name)
+		if err != nil {
+			log.Println("File not found after morphing, error:", err)
+			return http.StatusNotFound, []byte{}
+		}
+
+		io.Copy(w, file)
+		file.Close()
+	}
+
+	return http.StatusOK, []byte{}
 }
 
 func (this *File) ServeImage(enc encoder.Encoder, params martini.Params, options models.URLOptionsScheme, w http.ResponseWriter) (int, []byte) {

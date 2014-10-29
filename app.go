@@ -110,6 +110,12 @@ func main() {
 		(*ctrl.File).Find,
 	)
 
+	route.Get("/",
+		binding.Bind(models.URLOptionsScheme{}),
+		construct(&ctrl.File{}),
+		(*ctrl.File).Find,
+	)
+
 	route.Post("/",
 		construct(&ctrl.File{}),
 		(*ctrl.File).Create,

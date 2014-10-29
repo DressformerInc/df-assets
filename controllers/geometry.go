@@ -24,7 +24,7 @@ func (this *Geometry) FindAll(enc encoder.Encoder, params martini.Params, opt mo
 		opt.Limit = 25
 	}
 
-	result := this.model.FindAll(opt)
+	result := this.model.FindAll([]string{}, opt)
 
 	return http.StatusOK, encoder.Must(enc.Encode(result))
 }

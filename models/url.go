@@ -19,6 +19,7 @@ type URLOptionsScheme struct {
 	D         float32 `form:"d"`
 	D1        float32 `form:"d1"`
 	D2        float32 `form:"d2"`
+	Ids       string  `form:"geom_ids"`
 }
 
 type Params map[string]interface{}

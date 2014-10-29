@@ -40,8 +40,20 @@ func (*Geometry) Construct(args ...interface{}) interface{} {
 	}
 }
 
-func (this *Geometry) FindAll(opt URLOptionsScheme) []GeometryScheme {
-	rows, err := this.Skip(opt.Start).Limit(opt.Limit).Run(session())
+func (this *Geometry) FindAll(ids []string, opts URLOptionsScheme) []GeometryScheme {
+	var query r.Term
+
+	if opts.Limit == 0 || opts.Limit > 100 {
+		opts.Limit = 25
+	}
+
+	if len(ids) > 0 {
+		query = this.GetAll(r.Args(ids))
+	} else {
+		query = this.Skip(opts.Start).Limit(opts.Limit)
+	}
+
+	rows, err := query.Run(session())
 
 	if err != nil {
 		log.Println("Unable to fetch cursor for all. Error:", err)
@@ -149,9 +161,11 @@ func (this *Geometry) Remove(id string) error {
 // 1. change geometry id to oid
 // 2. move geometry api to main api server and use common http assets interface
 //    to get files
-
-// @todo This is just a prototype. Rewrite it!
-func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsScheme) ([]byte, error) {
+//
+// @todo
+// This is just a prototype. Rewrite it!
+//
+func Morph(dstNames []string, geoms []GeometryScheme, pmap Params, options URLOptionsScheme) ([]byte, error) {
 	bodySources := []*gomorph.Source{}
 	params := map[string]float32{}
 
@@ -161,7 +175,7 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 
 	bodySources = append(bodySources, &gomorph.Source{
 		Input:     AppConfig.StorageFilePath(defDummyGeometry.Base.Id),
-		Output:    dst,
+		Output:    dstNames[0],
 		ParamName: "base",
 		SrcWeight: float32(defaultDummy.Body.Height),
 	})
@@ -209,14 +223,15 @@ func (this *GeometryScheme) Morph(dst string, pmap Params, options URLOptionsSch
 	dummy := gomorph.NewDummy("default")
 	dummy.AddMorphTargets(bodySources)
 
-	if this.IsBody {
-		dummy.Morph(dst, params)
+	if geoms[0].IsBody {
+		dummy.Morph(dstNames[0], params)
 	} else {
-		garmentSources := []*gomorph.Source{
-			&gomorph.Source{
-				Input:  AppConfig.StorageFilePath(this.Base.Id),
-				Output: dst,
-			},
+		garmentSources := []*gomorph.Source{}
+
+		for i, name := range dstNames {
+			garmentSources = append(garmentSources, &gomorph.Source{
+				Input:  AppConfig.StorageFilePath(geoms[i].Base.Id),
+				Output: name})
 		}
 
 		dummy.Morph("", params)
